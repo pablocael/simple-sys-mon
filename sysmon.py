@@ -128,6 +128,7 @@ class Monitor(QtWidgets.QMainWindow):
         self._buf: dict[str, deque] = {}
         self._curves: dict[str, pg.PlotDataItem] = {}
         self._plots: dict[str, pg.PlotItem] = {}
+        self._text: dict[str, pg.TextItem] = {}
         self._labels: dict[str, str] = {}
         self._kinds: dict[str, str] = {}
 
@@ -142,6 +143,7 @@ class Monitor(QtWidgets.QMainWindow):
                 self.x, list(self._buf[key]), pen=pg.mkPen(color=color, width=2)
             )
             self._plots[key] = plot
+            self._text[key] = self._attach_readout(plot, color)
             self._labels[key] = label
             self._kinds[key] = kind
 
@@ -172,15 +174,35 @@ class Monitor(QtWidgets.QMainWindow):
             plot.setLimits(yMin=0)
             plot.enableAutoRange(axis="y")
 
+    def _attach_readout(self, plot, color):
+        """A label/value readout pinned to the plot's top-left corner.
+
+        It lives inside the ViewBox (not the plot's layout), so its text can
+        change length every update without ever resizing the plot or the grid.
+        """
+        text = pg.TextItem(anchor=(0, 0), color=color,
+                           fill=pg.mkBrush(14, 17, 22, 190))
+        text.setZValue(10)
+        plot.addItem(text, ignoreBounds=True)  # don't let it affect auto-range
+        vb = plot.getViewBox()
+
+        def place(*_):
+            (x0, _x1), (_y0, y1) = vb.viewRange()
+            text.setPos(x0, y1)
+
+        vb.sigRangeChanged.connect(place)
+        place()
+        return text
+
     def _update(self, key, value):
-        """Push a sample, redraw its curve, and refresh its title."""
+        """Push a sample, redraw its curve, and refresh the readout."""
         self._buf[key].append(value)
         self._curves[key].setData(self.x, list(self._buf[key]))
         if self._kinds[key] == "pct":
-            text = f"{self._labels[key]}   {value:.0f}%"
+            text = f"{self._labels[key]}  {value:.0f}%"
         else:
-            text = f"{self._labels[key]}   {fmt_bytes(value)}"
-        self._plots[key].setTitle(text, color="#c0c6d0", size="10pt")
+            text = f"{self._labels[key]}  {fmt_bytes(value)}"
+        self._text[key].setText(text)
 
     def tick(self):
         # --- percentages ---------------------------------------------------
@@ -190,8 +212,8 @@ class Monitor(QtWidgets.QMainWindow):
         self._update("gpu", gpu)
         self._update("vram", vram)
         if not self.gpu.ok:
-            self._plots["gpu"].setTitle("GPU   n/a", color="#c0c6d0", size="10pt")
-            self._plots["vram"].setTitle("VRAM   n/a", color="#c0c6d0", size="10pt")
+            self._text["gpu"].setText("GPU  n/a")
+            self._text["vram"].setText("VRAM  n/a")
 
         # --- network rates -------------------------------------------------
         net = psutil.net_io_counters()
