@@ -74,6 +74,19 @@ python3 -m venv .venv
 `run.sh` just invokes the app through the virtualenv; you can also run
 `.venv/bin/python sysmon.py` directly.
 
+### Add to your application menu
+
+A desktop entry is included. Install it for the current user with:
+
+```bash
+install -Dm644 simple-sys-mon.desktop ~/.local/share/applications/simple-sys-mon.desktop
+update-desktop-database ~/.local/share/applications
+```
+
+`simple-sys-mon` will then show up in your launcher under *System*. If you
+cloned to a different path, edit the `Exec=` line in `simple-sys-mon.desktop`
+to point at your `run.sh`.
+
 ## How it works
 
 - A single `QTimer` fires every `--interval` ms. Each tick samples every

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=simple-sys-mon
+GenericName=System Monitor
+Comment=Lightweight time-series monitor for CPU, RAM, GPU, VRAM, network and disk
+Exec=/mnt/data/Personal/development/sys-mon/run.sh
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+Keywords=cpu;ram;gpu;vram;network;disk;monitor;
+StartupNotify=true
