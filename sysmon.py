@@ -105,6 +105,7 @@ METRICS = [
     ("dw", "Disk Write", C_DISK_W, "bytes"),
 ]
 COLS = 2  # grid columns
+AXIS_WIDTH = 76  # fixed left-axis width (px) so plots don't jitter on update
 
 
 class Monitor(QtWidgets.QMainWindow):
@@ -160,6 +161,11 @@ class Monitor(QtWidgets.QMainWindow):
         plot.showGrid(x=True, y=True, alpha=0.15)
         plot.setLabel("bottom", "seconds")
         plot.setXRange(self.x[0], 0, padding=0)
+        # Pin the y-axis width so changing tick-label lengths (e.g. "9.5 MB/s"
+        # -> "143.1 MB/s") don't resize the axis and make the grid jitter.
+        left = plot.getAxis("left")
+        left.setStyle(autoExpandTextSpace=False)
+        left.setWidth(AXIS_WIDTH)
         if kind == "pct":
             plot.setYRange(0, 100, padding=0)
         else:
