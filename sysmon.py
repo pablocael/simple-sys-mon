@@ -8,12 +8,16 @@ polling at a fixed interval so resource use stays negligible.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from collections import deque
 
 import psutil
 import pyqtgraph as pg
-from PyQt6 import QtCore, QtWidgets
+from PyQt6 import QtCore, QtGui, QtWidgets
+
+APP_ID = "simple-sys-mon"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 try:
     import pynvml
@@ -206,6 +210,23 @@ class Monitor(QtWidgets.QMainWindow):
         super().closeEvent(event)
 
 
+def app_icon() -> QtGui.QIcon:
+    """Build the window/taskbar icon from bundled assets, with theme fallback."""
+    icon = QtGui.QIcon()
+    icon_dir = os.path.join(BASE_DIR, "assets", "icons")
+    for size in (16, 24, 32, 48, 64, 128, 256, 512):
+        path = os.path.join(icon_dir, f"{APP_ID}-{size}.png")
+        if os.path.exists(path):
+            icon.addFile(path)
+    if icon.isNull():
+        svg = os.path.join(BASE_DIR, "assets", "icon.svg")
+        if os.path.exists(svg):
+            icon.addFile(svg)
+    if icon.isNull():  # last resort: an installed theme icon
+        icon = QtGui.QIcon.fromTheme(APP_ID)
+    return icon
+
+
 def main():
     ap = argparse.ArgumentParser(description="Tiny efficient system monitor.")
     ap.add_argument("-i", "--interval", type=int, default=1000,
@@ -215,7 +236,16 @@ def main():
     args = ap.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
+    app.setApplicationName(APP_ID)
+    app.setApplicationDisplayName("simple-sys-mon")
+    # Wayland uses the desktop-file name as the window app_id, which is how KDE
+    # links the window/taskbar entry to the installed .desktop (and its icon).
+    app.setDesktopFileName(APP_ID)
+    icon = app_icon()
+    app.setWindowIcon(icon)
+
     win = Monitor(interval_ms=max(100, args.interval), history_s=max(10, args.history))
+    win.setWindowIcon(icon)
     win.show()
     sys.exit(app.exec())
 
