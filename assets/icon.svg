@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2230"/>
+      <stop offset="1" stop-color="#0c0f15"/>
+    </linearGradient>
+    <linearGradient id="cyanfill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#00d7ff" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#00d7ff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded background -->
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)"/>
+  <rect x="8.5" y="8.5" width="239" height="239" rx="51.5" fill="none"
+        stroke="#3a455a" stroke-opacity="0.6" stroke-width="2"/>
+
+  <!-- faint grid -->
+  <g stroke="#33405a" stroke-opacity="0.35" stroke-width="2">
+    <line x1="40" y1="96"  x2="216" y2="96"/>
+    <line x1="40" y1="148" x2="216" y2="148"/>
+    <line x1="40" y1="200" x2="216" y2="200"/>
+  </g>
+
+  <!-- area under the primary curve -->
+  <path d="M40 158 L72 104 L104 138 L136 78 L168 120 L216 88 L216 200 L40 200 Z"
+        fill="url(#cyanfill)"/>
+
+  <!-- primary (cyan) time-series -->
+  <path d="M40 158 L72 104 L104 138 L136 78 L168 120 L216 88"
+        fill="none" stroke="#00d7ff" stroke-width="11"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- secondary (magenta) time-series -->
+  <path d="M40 188 L72 172 L104 182 L136 150 L168 176 L216 158"
+        fill="none" stroke="#ff5db1" stroke-width="9"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- accent dots at the latest sample -->
+  <circle cx="216" cy="88"  r="9" fill="#00d7ff"/>
+  <circle cx="216" cy="158" r="7" fill="#ff5db1"/>
+  <circle cx="60"  cy="64"  r="6" fill="#57d957"/>
+</svg>

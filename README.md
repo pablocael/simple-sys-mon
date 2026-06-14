@@ -74,18 +74,27 @@ python3 -m venv .venv
 `run.sh` just invokes the app through the virtualenv; you can also run
 `.venv/bin/python sysmon.py` directly.
 
-### Add to your application menu
+### Install as a desktop app (KDE / GNOME / any freedesktop menu)
 
-A desktop entry is included. Install it for the current user with:
+Run the installer once — no terminal needed afterwards:
 
 ```bash
-install -Dm644 simple-sys-mon.desktop ~/.local/share/applications/simple-sys-mon.desktop
-update-desktop-database ~/.local/share/applications
+./install.sh
 ```
 
-`simple-sys-mon` will then show up in your launcher under *System*. If you
-cloned to a different path, edit the `Exec=` line in `simple-sys-mon.desktop`
-to point at your `run.sh`.
+This installs the custom app icon (scalable SVG + PNG sizes) and a desktop
+entry pointing at *this* checkout, then refreshes the icon/menu caches.
+`simple-sys-mon` then shows up in your application launcher under *System* with
+its own icon, so you can start it with a click.
+
+To remove it:
+
+```bash
+./uninstall.sh
+```
+
+The installer is relocatable — it points the launcher at wherever you cloned
+the repo, so you can move the folder and just re-run `./install.sh`.
 
 ## How it works
 
