@@ -115,6 +115,7 @@ METRICS = [
 ]
 COLS = 2  # grid columns
 AXIS_WIDTH = 76  # fixed left-axis width (px) so plots don't jitter on update
+FILL_ALPHA = 45  # opacity (0-255) of the area fill under each curve
 
 
 class Monitor(QtWidgets.QMainWindow):
@@ -149,8 +150,11 @@ class Monitor(QtWidgets.QMainWindow):
             plot = layout.addPlot(row=row, col=col, axisItems=axes)
             self._setup_plot(plot, kind)
             self._buf[key] = deque([0.0] * self.npoints, maxlen=self.npoints)
+            fill = pg.mkColor(color)
+            fill.setAlpha(FILL_ALPHA)
             self._curves[key] = plot.plot(
-                self.x, list(self._buf[key]), pen=pg.mkPen(color=color, width=2)
+                self.x, list(self._buf[key]), pen=pg.mkPen(color=color, width=2),
+                fillLevel=0, fillBrush=fill,
             )
             self._plots[key] = plot
             self._text[key] = self._attach_readout(plot, color)
