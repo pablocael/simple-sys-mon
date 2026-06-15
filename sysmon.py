@@ -167,21 +167,40 @@ class Monitor(QtWidgets.QMainWindow):
 
     def _setup_plot(self, plot, kind):
         plot.setMenuEnabled(False)
-        plot.setMouseEnabled(x=False, y=False)
+        # Mouse: wheel to zoom, left-drag to pan. Esc restores the default view.
+        plot.setMouseEnabled(x=True, y=True)
+        plot.getViewBox().setMouseMode(pg.ViewBox.PanMode)
         plot.hideButtons()
         plot.showGrid(x=True, y=True, alpha=0.15)
         plot.setLabel("bottom", "seconds")
-        plot.setXRange(self.x[0], 0, padding=0)
         # Pin the y-axis width so changing tick-label lengths (e.g. "9.5 MB/s"
         # -> "143.1 MB/s") don't resize the axis and make the grid jitter.
         left = plot.getAxis("left")
         left.setStyle(autoExpandTextSpace=False)
         left.setWidth(AXIS_WIDTH)
+        if kind != "pct":
+            plot.setLimits(yMin=0)
+        self._default_view(plot, kind)
+
+    def _default_view(self, plot, kind):
+        """Apply the standard scrolling view: full time window, default y."""
+        plot.setXRange(self.x[0], 0, padding=0)
         if kind == "pct":
             plot.setYRange(0, 100, padding=0)
         else:
-            plot.setLimits(yMin=0)
             plot.enableAutoRange(axis="y")
+
+    def reset_view(self):
+        """Restore every plot to its default view (bound to Esc)."""
+        for key, plot in self._plots.items():
+            self._default_view(plot, self._kinds[key])
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key.Key_Escape:
+            self.reset_view()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def _attach_readout(self, plot, color):
         """A label/value readout pinned to the plot's top-left corner.

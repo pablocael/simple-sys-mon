@@ -74,6 +74,12 @@ python3 -m venv .venv
 `run.sh` just invokes the app through the virtualenv; you can also run
 `.venv/bin/python sysmon.py` directly.
 
+### Controls
+
+- **Mouse wheel** — zoom (in/out) on the plot under the cursor.
+- **Left-drag** — pan around.
+- **Esc** — restore all plots to the default scrolling view.
+
 ### Install as a desktop app (KDE / GNOME / any freedesktop menu)
 
 Run the installer once — no terminal needed afterwards:
