@@ -69,6 +69,7 @@ class GpuReader:
         self.ok = False
         self.handle = None
         self.name = "GPU"
+        self.vram_total = 0.0
         if pynvml is None:
             return
         try:
@@ -77,6 +78,7 @@ class GpuReader:
                 self.handle = pynvml.nvmlDeviceGetHandleByIndex(0)
                 name = pynvml.nvmlDeviceGetName(self.handle)
                 self.name = name.decode() if isinstance(name, bytes) else name
+                self.vram_total = float(pynvml.nvmlDeviceGetMemoryInfo(self.handle).total)
                 self.ok = True
         except Exception:
             self.ok = False
@@ -132,7 +134,24 @@ class Monitor(QtWidgets.QMainWindow):
         pg.setConfigOptions(antialias=True, background="#0e1116", foreground="#c0c6d0")
         layout = pg.GraphicsLayoutWidget()
         self.canvas = layout
-        self.setCentralWidget(layout)
+
+        # Centered header with total system + GPU memory.
+        ram_total = fmt_size(psutil.virtual_memory().total)
+        vram_total = fmt_size(self.gpu.vram_total) if self.gpu.ok else "n/a"
+        header = QtWidgets.QLabel(f"RAM  {ram_total}        VRAM  {vram_total}")
+        header.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        header.setStyleSheet(
+            "color: #c0c6d0; background: #0e1116; padding: 6px;"
+            "font-size: 12pt; font-weight: bold;"
+        )
+
+        container = QtWidgets.QWidget()
+        vbox = QtWidgets.QVBoxLayout(container)
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(0)
+        vbox.addWidget(header)
+        vbox.addWidget(layout, 1)
+        self.setCentralWidget(container)
 
         # x axis: seconds in the past (… -2, -1, 0).
         self.x = [(-(self.npoints - 1) + i) * self.dt for i in range(self.npoints)]
