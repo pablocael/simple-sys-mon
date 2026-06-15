@@ -46,6 +46,15 @@ def fmt_bytes(n: float) -> str:
     return f"{n:.1f} GB/s"
 
 
+def fmt_size(n: float) -> str:
+    """Human-readable byte amount, e.g. 1.5 GB."""
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1024 or unit == "TB":
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+    return f"{n:.1f} TB"
+
+
 class ByteAxis(pg.AxisItem):
     """Y axis that labels ticks as byte rates instead of raw numbers."""
 
@@ -72,17 +81,17 @@ class GpuReader:
         except Exception:
             self.ok = False
 
-    def read(self) -> tuple[float, float]:
-        """Return (gpu_util_pct, vram_used_pct). (0, 0) if unavailable."""
+    def read(self) -> tuple[float, float, float]:
+        """Return (gpu_util_pct, vram_used_pct, vram_used_bytes). Zeros if N/A."""
         if not self.ok:
-            return 0.0, 0.0
+            return 0.0, 0.0, 0.0
         try:
             util = pynvml.nvmlDeviceGetUtilizationRates(self.handle).gpu
             mem = pynvml.nvmlDeviceGetMemoryInfo(self.handle)
             vram = mem.used / mem.total * 100 if mem.total else 0.0
-            return float(util), float(vram)
+            return float(util), float(vram), float(mem.used)
         except Exception:
-            return 0.0, 0.0
+            return 0.0, 0.0, 0.0
 
     def shutdown(self):
         if self.ok:
@@ -194,12 +203,18 @@ class Monitor(QtWidgets.QMainWindow):
         place()
         return text
 
-    def _update(self, key, value):
-        """Push a sample, redraw its curve, and refresh the readout."""
+    def _update(self, key, value, detail=""):
+        """Push a sample, redraw its curve, and refresh the readout.
+
+        ``detail`` is an optional absolute amount shown in parentheses after a
+        percentage (used by memory meters, e.g. "VRAM 12% (1.5 GB)").
+        """
         self._buf[key].append(value)
         self._curves[key].setData(self.x, list(self._buf[key]))
         if self._kinds[key] == "pct":
             text = f"{self._labels[key]}  {value:.0f}%"
+            if detail:
+                text += f"  ({detail})"
         else:
             text = f"{self._labels[key]}  {fmt_bytes(value)}"
         self._text[key].setText(text)
@@ -207,10 +222,11 @@ class Monitor(QtWidgets.QMainWindow):
     def tick(self):
         # --- percentages ---------------------------------------------------
         self._update("cpu", psutil.cpu_percent(interval=None))
-        self._update("ram", psutil.virtual_memory().percent)
-        gpu, vram = self.gpu.read()
+        vm = psutil.virtual_memory()
+        self._update("ram", vm.percent, detail=fmt_size(vm.total - vm.available))
+        gpu, vram, vram_used = self.gpu.read()
         self._update("gpu", gpu)
-        self._update("vram", vram)
+        self._update("vram", vram, detail=fmt_size(vram_used))
         if not self.gpu.ok:
             self._text["gpu"].setText("GPU  n/a")
             self._text["vram"].setText("VRAM  n/a")
