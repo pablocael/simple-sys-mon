@@ -145,11 +145,19 @@ class Monitor(QtWidgets.QMainWindow):
             "font-size: 12pt; font-weight: bold;"
         )
 
+        # Live global summary: current value of every metric, color-matched.
+        self.summary = QtWidgets.QLabel("")
+        self.summary.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.summary.setStyleSheet(
+            "background: #0e1116; padding: 2px 6px 6px 6px; font-size: 10pt;"
+        )
+
         container = QtWidgets.QWidget()
         vbox = QtWidgets.QVBoxLayout(container)
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(0)
         vbox.addWidget(header)
+        vbox.addWidget(self.summary)
         vbox.addWidget(layout, 1)
         self.setCentralWidget(container)
 
@@ -269,7 +277,8 @@ class Monitor(QtWidgets.QMainWindow):
 
     def tick(self):
         # --- percentages ---------------------------------------------------
-        self._update("cpu", psutil.cpu_percent(interval=None))
+        cpu = psutil.cpu_percent(interval=None)
+        self._update("cpu", cpu)
         vm = psutil.virtual_memory()
         self._update("ram", vm.percent, detail=fmt_size(vm.total - vm.available))
         gpu, vram, vram_used = self.gpu.read()
@@ -281,8 +290,10 @@ class Monitor(QtWidgets.QMainWindow):
 
         # --- network rates -------------------------------------------------
         net = psutil.net_io_counters()
-        self._update("rx", max(0, net.bytes_recv - self._net.bytes_recv) / self.dt)
-        self._update("tx", max(0, net.bytes_sent - self._net.bytes_sent) / self.dt)
+        rx = max(0, net.bytes_recv - self._net.bytes_recv) / self.dt
+        tx = max(0, net.bytes_sent - self._net.bytes_sent) / self.dt
+        self._update("rx", rx)
+        self._update("tx", tx)
         self._net = net
 
         # --- disk rates ----------------------------------------------------
@@ -295,6 +306,27 @@ class Monitor(QtWidgets.QMainWindow):
         self._update("dr", dr)
         self._update("dw", dw)
         self._disk = disk
+
+        self._update_summary(cpu, vm.percent, gpu, vram, rx, tx, dr, dw)
+
+    def _update_summary(self, cpu, ram, gpu, vram, rx, tx, dr, dw):
+        """Refresh the centered color-matched summary line of live values."""
+        gpu_s = f"GPU {gpu:.0f}%" if self.gpu.ok else "GPU n/a"
+        vram_s = f"VRAM {vram:.0f}%" if self.gpu.ok else "VRAM n/a"
+        parts = [
+            (C_CPU, f"CPU {cpu:.0f}%"),
+            (C_RAM, f"RAM {ram:.0f}%"),
+            (C_GPU, gpu_s),
+            (C_VRAM, vram_s),
+            (C_NET_RX, f"↓ {fmt_bytes(rx)}"),
+            (C_NET_TX, f"↑ {fmt_bytes(tx)}"),
+            (C_DISK_R, f"Disk R {fmt_bytes(dr)}"),
+            (C_DISK_W, f"Disk W {fmt_bytes(dw)}"),
+        ]
+        sep = '<span style="color:#5a6473">&nbsp;&nbsp;•&nbsp;&nbsp;</span>'
+        self.summary.setText(
+            sep.join(f'<span style="color:{c}">{t}</span>' for c, t in parts)
+        )
 
     def closeEvent(self, event):
         self.timer.stop()
