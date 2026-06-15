@@ -76,9 +76,11 @@ python3 -m venv .venv
 
 ### Controls
 
-- **Mouse wheel** — zoom (in/out) on the plot under the cursor.
-- **Left-drag** — pan around.
-- **Esc** — restore all plots to the default scrolling view.
+The time axis is shared, so zoom/pan acts on the whole canvas at once:
+
+- **Mouse wheel** — zoom the time window in/out (all plots together).
+- **Left-drag** — pan through time (all plots together).
+- **Esc** — restore the default scrolling view.
 
 ### Install as a desktop app (KDE / GNOME / any freedesktop menu)
 

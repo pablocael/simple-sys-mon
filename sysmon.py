@@ -142,11 +142,17 @@ class Monitor(QtWidgets.QMainWindow):
         self._kinds: dict[str, str] = {}
 
         # one independent plot per metric, arranged in a grid
+        self._xmaster = None
         for i, (key, label, color, kind) in enumerate(METRICS):
             row, col = divmod(i, COLS)
             axes = {"left": ByteAxis("left")} if kind == "bytes" else None
             plot = layout.addPlot(row=row, col=col, axisItems=axes)
             self._setup_plot(plot, kind)
+            # Link every plot's time axis so zoom/pan moves the whole canvas.
+            if self._xmaster is None:
+                self._xmaster = plot
+            else:
+                plot.setXLink(self._xmaster)
             self._buf[key] = deque([0.0] * self.npoints, maxlen=self.npoints)
             self._curves[key] = plot.plot(
                 self.x, list(self._buf[key]), pen=pg.mkPen(color=color, width=2)
@@ -167,8 +173,10 @@ class Monitor(QtWidgets.QMainWindow):
 
     def _setup_plot(self, plot, kind):
         plot.setMenuEnabled(False)
-        # Mouse: wheel to zoom, left-drag to pan. Esc restores the default view.
-        plot.setMouseEnabled(x=True, y=True)
+        # Mouse acts on the shared time axis only (X), and every plot's X is
+        # linked, so wheel-zoom / left-drag pans the whole canvas together.
+        # Esc restores the default view.
+        plot.setMouseEnabled(x=True, y=False)
         plot.getViewBox().setMouseMode(pg.ViewBox.PanMode)
         plot.hideButtons()
         plot.showGrid(x=True, y=True, alpha=0.15)
