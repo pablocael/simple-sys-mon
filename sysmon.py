@@ -130,6 +130,7 @@ class Monitor(QtWidgets.QMainWindow):
 
         pg.setConfigOptions(antialias=True, background="#0e1116", foreground="#c0c6d0")
         layout = pg.GraphicsLayoutWidget()
+        self.canvas = layout
         self.setCentralWidget(layout)
 
         # x axis: seconds in the past (… -2, -1, 0).
@@ -142,17 +143,11 @@ class Monitor(QtWidgets.QMainWindow):
         self._kinds: dict[str, str] = {}
 
         # one independent plot per metric, arranged in a grid
-        self._xmaster = None
         for i, (key, label, color, kind) in enumerate(METRICS):
             row, col = divmod(i, COLS)
             axes = {"left": ByteAxis("left")} if kind == "bytes" else None
             plot = layout.addPlot(row=row, col=col, axisItems=axes)
             self._setup_plot(plot, kind)
-            # Link every plot's time axis so zoom/pan moves the whole canvas.
-            if self._xmaster is None:
-                self._xmaster = plot
-            else:
-                plot.setXLink(self._xmaster)
             self._buf[key] = deque([0.0] * self.npoints, maxlen=self.npoints)
             self._curves[key] = plot.plot(
                 self.x, list(self._buf[key]), pen=pg.mkPen(color=color, width=2)
@@ -171,13 +166,14 @@ class Monitor(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.tick)
         self.timer.start(interval_ms)
 
+        # Enable whole-canvas zoom/pan once the widget has its real size.
+        QtCore.QTimer.singleShot(0, self.reset_view)
+
     def _setup_plot(self, plot, kind):
         plot.setMenuEnabled(False)
-        # Mouse acts on the shared time axis only (X), and every plot's X is
-        # linked, so wheel-zoom / left-drag pans the whole canvas together.
-        # Esc restores the default view.
-        plot.setMouseEnabled(x=True, y=False)
-        plot.getViewBox().setMouseMode(pg.ViewBox.PanMode)
+        # Plots themselves are non-interactive; zoom/pan is handled by the
+        # whole GraphicsView so the entire canvas scales uniformly.
+        plot.setMouseEnabled(x=False, y=False)
         plot.hideButtons()
         plot.showGrid(x=True, y=True, alpha=0.15)
         plot.setLabel("bottom", "seconds")
@@ -186,22 +182,24 @@ class Monitor(QtWidgets.QMainWindow):
         left = plot.getAxis("left")
         left.setStyle(autoExpandTextSpace=False)
         left.setWidth(AXIS_WIDTH)
-        if kind != "pct":
-            plot.setLimits(yMin=0)
-        self._default_view(plot, kind)
-
-    def _default_view(self, plot, kind):
-        """Apply the standard scrolling view: full time window, default y."""
         plot.setXRange(self.x[0], 0, padding=0)
         if kind == "pct":
             plot.setYRange(0, 100, padding=0)
         else:
+            plot.setLimits(yMin=0)
             plot.enableAutoRange(axis="y")
 
     def reset_view(self):
-        """Restore every plot to its default view (bound to Esc)."""
-        for key, plot in self._plots.items():
-            self._default_view(plot, self._kinds[key])
+        """Reset the whole-canvas zoom/pan to 1:1 fitting the window (Esc)."""
+        g = self.canvas
+        g.enableMouse(False)   # autoPixelRange on: refit to viewport, identity
+        g.resizeEvent(None)
+        g.enableMouse(True)    # back to interactive whole-view zoom/pan
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Refit the canvas to the new window size (drops any active zoom).
+        QtCore.QTimer.singleShot(0, self.reset_view)
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key.Key_Escape:

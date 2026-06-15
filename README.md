@@ -76,11 +76,12 @@ python3 -m venv .venv
 
 ### Controls
 
-The time axis is shared, so zoom/pan acts on the whole canvas at once:
+Zoom/pan scales the whole canvas uniformly — like zooming an image, so the
+plots, axes, and text all grow together:
 
-- **Mouse wheel** — zoom the time window in/out (all plots together).
-- **Left-drag** — pan through time (all plots together).
-- **Esc** — restore the default scrolling view.
+- **Mouse wheel** — zoom the entire canvas in/out.
+- **Left-drag** — pan around when zoomed in.
+- **Esc** — reset to the 1:1 view that fits the window.
 
 ### Install as a desktop app (KDE / GNOME / any freedesktop menu)
 
