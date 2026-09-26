@@ -138,18 +138,29 @@ class Monitor(QtWidgets.QMainWindow):
         # Centered header with total system + GPU memory.
         ram_total = fmt_size(psutil.virtual_memory().total)
         vram_total = fmt_size(self.gpu.vram_total) if self.gpu.ok else "n/a"
-        header = QtWidgets.QLabel(f"RAM  {ram_total}        VRAM  {vram_total}")
+        # Each "RAM 125.2 GB" item is one unbreakable token (nbsp inside) so the
+        # line can only wrap between items when the window is narrow.
+        header = QtWidgets.QLabel(
+            f"RAM&nbsp;&nbsp;{ram_total} &nbsp;&nbsp;&nbsp;&nbsp; VRAM&nbsp;&nbsp;{vram_total}"
+        )
+        header.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        header.setWordWrap(True)
         header.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         header.setStyleSheet(
-            "color: #c0c6d0; background: #0e1116; padding: 6px;"
+            "color: #c0c6d0; background: #0e1116; padding: 4px 6px 2px 6px;"
             "font-size: 12pt; font-weight: bold;"
         )
 
         # Live global summary: current value of every metric, color-matched.
+        # Word-wrapped so it never dictates a minimum window width: a QLabel
+        # that can't wrap forces the window to be at least as wide as its text,
+        # which kept the app from fitting narrow KDE tiles.
         self.summary = QtWidgets.QLabel("")
+        self.summary.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        self.summary.setWordWrap(True)
         self.summary.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.summary.setStyleSheet(
-            "background: #0e1116; padding: 2px 6px 6px 6px; font-size: 10pt;"
+            "background: #0e1116; padding: 0px 6px 4px 6px; font-size: 10pt;"
         )
 
         container = QtWidgets.QWidget()
@@ -323,9 +334,14 @@ class Monitor(QtWidgets.QMainWindow):
             (C_DISK_R, f"Disk R {fmt_bytes(dr)}"),
             (C_DISK_W, f"Disk W {fmt_bytes(dw)}"),
         ]
-        sep = '<span style="color:#5a6473">&nbsp;&nbsp;•&nbsp;&nbsp;</span>'
+        # Spaces inside an item are non-breaking so "Disk R 4.0 KB/s" stays
+        # together; the plain space before each bullet is the only place the
+        # line may wrap when the window is narrow (a wrapped line then starts
+        # with its bullet rather than leaving one dangling at the end).
+        sep = ' <span style="color:#5a6473">•</span>&nbsp;'
         self.summary.setText(
-            sep.join(f'<span style="color:{c}">{t}</span>' for c, t in parts)
+            sep.join(f'<span style="color:{c}">{t.replace(" ", "&nbsp;")}</span>'
+                     for c, t in parts)
         )
 
     def closeEvent(self, event):
